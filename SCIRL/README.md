@@ -6,9 +6,9 @@ classification." *Advances in Neural Information Processing Systems*. **2012**.]
 
 Given a training set of state, action (from expert deterministic policy on that
 state) pairs, the algorithm requires two primary components:
-- an estimate of the expert feature expectations
-- a linearly parametrised score function-based multi-class classification
-  algorithm
+- an estimate of the **expert feature expectations**
+- a linearly parametrised score function-based multi-class **classification
+  algorithm**
 
 The reward function is assumed to be a linear combination of some basis 
 functions on the state space (these must be given). Feature expectations are 
@@ -35,3 +35,37 @@ of the action-value function, we obtain the reward function because it shares
 these parameters.
 
 *This all would have been a lot easier to describe if I could use LaTeX...*
+
+So this leaves two questions:
+
+#### 1. Getting expert feature expectations
+
+This is tricky because one would like to know the underlying dynamics of the
+system (state-action-state transition functions: a *model* of the system) to
+calculate the expected value of anything. This isn't always available. If it
+is, the problem is a standard policy-evaluation problem (since the feature
+expectations are the action-value functions for special choices of reward
+function).
+
+If you *don't* have a model of the system handy, things are harder. You can use
+temporal difference learning algorithms: they mention least-squares temporal 
+differences, but actually use a heuristic method: (eq 5)
+
+For state-action pairs *observed* in the available expert trajectories, one
+empirically calculates the feature expectation (with the discount factor).
+
+For state-action pairs *not* observed, one assumes that the non-expert will
+make the correct choice on their next move, (*'applying a non-expert action
+just delays the effect of the expert action'*), so the feature expectation is
+multiplied by the discount factor.
+
+#### 2. Multi-class classification algorithm
+
+They use the structured large margin approach: ([Taskar, Ben, et al. "Learning
+structured prediction models: A large margin approach." *Proceedings of the 22nd
+international conference on Machine learning*. ACM,
+**2005**.](https://dl.acm.org/citation.cfm?id=1102464))
+
+This basically means choosing an appropriate loss function (section 4.2 in the
+paper) and minimizing using subgradient descent. The expert feature
+expectations are involved, here.
