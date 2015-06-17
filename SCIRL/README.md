@@ -1,8 +1,8 @@
-# Structured Classification-based Inverse Reinforcement Learning
+### Structured Classification-based Inverse Reinforcement Learning
+My attempt at implementing the SCIRL algorithm as introduced in  
 
-My attempt at implementing the SCIRL algorithm as described in
-Klein, Edouard, et al. "Inverse reinforcement learning through structured
-classification." *Advances in Neural Information Processing Systems*. 2012.
+[Klein, Edouard, et al. "Inverse reinforcement learning through structured
+classification." *Advances in Neural Information Processing Systems*. **2012**.](http://papers.nips.cc/paper/4551-inverse)
 
 Given a training set of state, action (from expert deterministic policy on that
 state) pairs, the algorithm requires two primary components:
@@ -35,4 +35,3 @@ of the action-value function, we obtain the reward function because it shares
 these parameters.
 
 *This all would have been a lot easier to describe if I could use LaTeX...*
-
