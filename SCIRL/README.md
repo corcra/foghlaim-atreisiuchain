@@ -42,12 +42,12 @@ So this leaves two questions:
 
 This is tricky because one would like to know the underlying dynamics of the
 system (state-action-state transition functions: a *model* of the system) to
-calculate the expected value of anything. This isn't always available. If it
+calculate the expected value of anything. This isn\'t always available. If it
 is, the problem is a standard policy-evaluation problem (since the feature
 expectations are the action-value functions for special choices of reward
 function).
 
-If you *don't* have a model of the system handy, things are harder. You can use
+If you *don\'t* have a model of the system handy, things are harder. You can use
 temporal difference learning algorithms: they mention least-squares temporal 
 differences, but actually use a heuristic method: (eq 5)
 
@@ -55,8 +55,8 @@ For state-action pairs *observed* in the available expert trajectories, one
 empirically calculates the feature expectation (with the discount factor).
 
 For state-action pairs *not* observed, one assumes that the non-expert will
-make the correct choice on their next move, (*'applying a non-expert action
-just delays the effect of the expert action'*), so the feature expectation is
+make the correct choice on their next move, (*\'applying a non-expert action
+just delays the effect of the expert action\'*), so the feature expectation is
 multiplied by the discount factor.
 
 #### 2. Multi-class classification algorithm
