@@ -1,4 +1,4 @@
-# Structured Classification-based Inverse Reinforcement Learning
+### Structured Classification-based Inverse Reinforcement Learning
 
 My attempt at implementing the SCIRL algorithm as introduced in  
 
