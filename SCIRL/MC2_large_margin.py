@@ -18,16 +18,20 @@ class clf_large_margin(object):
         action_indices = data[:, 1]
         state_indices = data[:, 0]
         loss = np.ones(shape=(N, self.A))           # (N x |A|)
-        loss[[range(N), action_indices]] = 0            # zero at true actions
-        state_features = self.features[:, state_indices, :]              # (k x N x |A|)
+        loss[[range(N), action_indices]] = 0        # zero at true actions
+        state_features = self.features[:, state_indices, :] # (k x N x |A|)
         if params is None:
-            weighted_state_features = np.einsum('i,ijk', self.params, state_features)   # (N x |A|)
+            weighted_state_features = np.einsum('i,ijk', 
+                                                self.params,
+                                                state_features)     # (N x |A|)
         else:
-            weighted_state_features = np.einsum('i,ijk', params, state_features)   # (N x |A|)
-        term1 = np.max(weighted_state_features + loss, axis=1)          # (N)
-        term2 = weighted_state_features[[range(N), action_indices]]    # (N)
+            weighted_state_features = np.einsum('i,ijk',
+                                                params,
+                                                state_features)     # (N x |A|)
+        term1 = np.max(weighted_state_features + loss, axis=1)      # (N)
+        term2 = weighted_state_features[[range(N), action_indices]] # (N)
         objective = np.mean(term1 - term2) + \
-                    0.5*lambd*np.dot(self.params,self.params)         # (1)
+                    0.5*lambd*np.dot(self.params,self.params)       # (1)
         return objective
     def fit(self, data, alpha=0.1, lambd=0.5, threshold=1e-6, max_iter=10000):
         N = data.shape[0]
@@ -35,14 +39,19 @@ class clf_large_margin(object):
         objective = self.objective(data)
         state_indices = data[:, 0]
         action_indices = data[:, 1]
-        state_features= self.features[:, state_indices, :]              # (k x N x |A|)
+        state_features= self.features[:, state_indices, :]  # (k x N x |A|)
         current_objective = self.objective(data)
         iteration = 0
         while abs(delta_objective) > threshold and delta_objective < 0:
-            weighted_state_features = np.einsum('i,ijk', self.params, state_features)   # (N x |A|)
-            local_max_action_indices = np.argmax(weighted_state_features, axis=1)   # (N)
-            term1 = np.array([state_features[:, i, local_max_action_indices[i]] for i in xrange(N)])    # (N x k) NOTE TRANSPOSED
-            term2 = np.array([state_features[:, i, action_indices[i]] for i in xrange(N)])  # (N x k)
+            weighted_state_features = np.einsum('i,ijk',
+                                                self.params,
+                                                state_features)     # (N x |A|)
+            max_action_indices = np.argmax(weighted_state_features, axis=1)
+            term1 = np.array([state_features[:, i, max_action_indices[i]] \
+                              for i in xrange(N)])                  # (N x k)
+                                                            # NOTE TRANSPOSED
+            term2 = np.array([state_features[:, i, action_indices[i]] \
+                              for i in xrange(N)])                  # (N x k)
             diff_term = np.mean(term1 - term2, axis=0)      # (k)
             subgradient = diff_term + lambd*self.params
             self.params -= alpha*subgradient
