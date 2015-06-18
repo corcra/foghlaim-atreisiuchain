@@ -6,6 +6,7 @@
 # http://papers.nips.cc/paper/4551-inverse
 #
 
+from MDP import mdp
 import numpy as np
 import sys
 
@@ -25,18 +26,44 @@ def feature_expectations_heuristic(trajectory, features, gamma):
     equation 5.
     """
     N = trajectory.shape[0]
-    S = features.shape[1]
-    k = features.shape[0]
+    S = features.shape[0]
+    k = features.shape[1]
     A = max(trajectory[:, 1]) + 1
-    feature_expectations = np.zeros(shape=(k, S, A))
+    feature_expectations = np.zeros(shape=(A, S, k))
     gamma_powers = [gamma**n for n in xrange(N)]
     for (i, (s, a)) in enumerate(trajectory):
         feature_expectations[:, s, a] = 0
         for j in xrange(i, N):
-            feature_expectations[:, s, a] += gamma_powers[j-i]*features[:, trajectory[j, 0]]
+            feature_expectations[a, s, :] += gamma_powers[j-i]*features[trajectory[j, 0], :]
         for aa in xrange(A):
             if not aa == a:
-                feature_expectations[:, s, aa] = gamma*feature_expectations[:, s, a]
+                feature_expectations[aa, s, :] = gamma*feature_expectations[a, s, :]
+    return feature_expectations
+
+def feature_expectations_exact(mdp, features, gamma):
+    """
+    Calculate expert feature expectations using the explicit expression in
+    section 4.1.
+    Note that it requires an mdp.
+    (technically, it just requires the transitions and the policy)
+    """
+    S = mdp.n_states
+    k = features.shape[1]
+    assert S == features.shape[0]
+    A = len(mdp.actions)
+    assert mdp.policy.deterministic == True
+    policy = mdp.policy.function            # |S|, values are action indices
+    P_expert = np.zeros(shape=(S, S))
+    for s in xrange(S):
+        policy_action = policy[s]
+        # each row in P_expert is the transition probability assuming one takes
+        # the optimal action in that state
+        P_expert[s, :] = mdp.actions[policy_action].function[s, :]
+    inverse_term = np.linalg.inv(1 + gamma*P_expert)
+    feature_expectations = np.zeros(shape=(A, S, k))
+    for a in xrange(A):
+        print np.dot((1 + gamma*mdp.actions[a].function*inverse_term), features).shape
+        feature_expectations[a, :, :] = np.dot((1 + gamma*mdp.actions[a].function*inverse_term), features)
     return feature_expectations
 
 # ==== linearly parametrised score-function based multi-class classifier === #
@@ -48,9 +75,9 @@ class clf_large_margin(object):
     """
     def __init__(self, features, parameters=None):
         self.features = features            # mu (k x |S| x |A|)
-        self.k = self.features.shape[0]
+        self.A = self.features.shape[0]
         self.S = self.features.shape[1]
-        self.A = self.features.shape[2]
+        self.k = self.features.shape[2]
         if parameters is None:
             parameters = np.zeros(self.k)
         else:
@@ -61,18 +88,18 @@ class clf_large_margin(object):
         N = data.shape[0]
         action_indices = data[:, 1]
         state_indices = data[:, 0]
-        loss = np.ones(shape=(N, self.A))           # (N x |A|)
+        loss = np.ones(shape=(self.A, N))           # (|A| x N)
         loss[[range(N), action_indices]] = 0        # zero at true actions
-        state_features = self.features[:, state_indices, :] # (k x N x |A|)
+        state_features = self.features[:, state_indices, :] # (|A| x N x k)
         if params is None:
-            weighted_state_features = np.einsum('i,ijk', 
+            weighted_state_features = np.einsum('k,ijk', 
                                                 self.params,
-                                                state_features)     # (N x |A|)
+                                                state_features)     # (|A| x N)
         else:
-            weighted_state_features = np.einsum('i,ijk',
+            weighted_state_features = np.einsum('k,ijk',
                                                 params,
-                                                state_features)     # (N x |A|)
-        term1 = np.max(weighted_state_features + loss, axis=1)      # (N)
+                                                state_features)     # (|A| x N)
+        term1 = np.max(weighted_state_features + loss, axis=0)      # (N)
         term2 = weighted_state_features[[range(N), action_indices]] # (N)
         objective = np.mean(term1 - term2) + \
                     0.5*lambd*np.dot(self.params,self.params)       # (1)
@@ -84,15 +111,15 @@ class clf_large_margin(object):
         objective = self.objective(data)
         state_indices = data[:, 0]
         action_indices = data[:, 1]
-        state_features= self.features[:, state_indices, :]  # (k x N x |A|)
+        state_features= self.features[:, state_indices, :]  # (|A| x N x k)
         current_objective = self.objective(data)
         iteration = 0
         while abs(delta_objective) > threshold and delta_objective < 0:
-            weighted_state_features = np.einsum('i,ijk',
+            weighted_state_features = np.einsum('k,ijk',
                                                 self.params,
-                                                state_features)     # (N x |A|)
-            max_action_indices = np.argmax(weighted_state_features, axis=1)
-            term1 = np.array([state_features[:, i, max_action_indices[i]] \
+                                                state_features)     # (|A| x N)
+            max_action_indices = np.argmax(weighted_state_features, axis=0)
+            term1 = np.array([state_features[max_action_indices[i], i, :] \
                               for i in xrange(N)])                  # (N x k)
                                                             # NOTE TRANSPOSED
             term2 = np.array([state_features[:, i, action_indices[i]] \
@@ -107,7 +134,7 @@ class clf_large_margin(object):
             if iteration > max_iter:
                 print 'WARNING: Hit max iterations before convergence.'
                 break
-            print iteration, current_objective, delta_objective
+            #print iteration, current_objective, delta_objective
         return True
 
 
@@ -124,11 +151,13 @@ def get_training_data(traj_path, basis_path):
     # note, these go from S -> R^k
     try:
         basis_functions = np.load(basis_path)
-        k = basis_functions.shape[0]
-        S = basis_functions.shape[1]
+        S = basis_functions.shape[0]
+        k = basis_functions.shape[1]
         assert S >= max(trajectory[:, 0])
     except IOError:
         sys.exit('ERROR: Please provide a valid .npy file.')
+    # --- map trajectory to integers --- #
+    trajectory = trajectory.astype(int)
     return trajectory, basis_functions
 
 # === SCIRL === #
@@ -142,5 +171,5 @@ def SCIRL(trajectory, basis_functions, GAMMA=0.9):
     clf.fit(trajectory)
     theta = clf.params
     # --- construct reward function --- #
-    reward = np.dot(theta, basis_functions) # (|S|)
+    reward = np.dot(basis_functions, theta) # (|S|)
     return reward
