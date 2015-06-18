@@ -6,13 +6,16 @@
 import numpy as np
 
 class clf_large_margin(object):
-    def __init__(self, features, parameters):
-        self.params = parameters            # theta (k)
+    def __init__(self, features, parameters=None):
         self.features = features            # mu (k x |S| x |A|)
-        self.k = self.params.shape[0]
-        assert self.features.shape[0] == self.k
+        self.k = self.features.shape[0]
         self.S = self.features.shape[1]
         self.A = self.features.shape[2]
+        if parameters is None:
+            parameters = np.zeros(self.k)
+        else:
+            assert parameters.shape[0] == self.k
+        self.params = parameters            # theta (k)
     def objective(self, data, lambd=0.5, params=None):
         N = data.shape[0]
         action_indices = data[:, 1]
