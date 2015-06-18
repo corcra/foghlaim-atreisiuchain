@@ -19,8 +19,8 @@ def value_iteration(n_states, actions, rewards, discount, eps):
     (returns a policy)
     """
     threshold = eps*(1-discount)/discount
-    utilities = np.zeros(n_states)
-    new_utilities = np.zeros(n_states)
+    value_fns = np.zeros(n_states)
+    new_value_fns = np.zeros(n_states)
     deltaUs = np.zeros(n_states)
     policy = PolicyFun(deterministic=True, finite=True, fun=None)
     policy_fun = [0]*n_states
@@ -28,21 +28,21 @@ def value_iteration(n_states, actions, rewards, discount, eps):
     n_iter = 0
     while delta > threshold:
         n_iter += 1
-        # precompute transitions with utilities
+        # precompute transitions with value_fns
         # WARNING: action.function is liable to change semantically
-        nbh_utilities = [np.dot(a.function, utilities) for a in actions]
+        nbh_value_fns = [np.dot(a.function, value_fns) for a in actions]
         for s in xrange(n_states):
-            new_utilities[s] = rewards[s] + \
-                               discount*np.max([nbh_u[s] for nbh_u in nbh_utilities])
-            deltaUs[s] = abs(new_utilities[s] - utilities[s])
+            new_value_fns[s] = rewards[s] + \
+                               discount*np.max([nbh_u[s] for nbh_u in nbh_value_fns])
+            deltaUs[s] = abs(new_value_fns[s] - value_fns[s])
         delta = max(deltaUs)
-        utilities[:] = new_utilities[:]
+        value_fns[:] = new_value_fns[:]
     print 'Optimal policy obtained after', n_iter, 
     print 'iterations using threshold of', threshold
-    # when this is over, we have our optimal utilities, and can get the policy
-    nbh_utilities = [np.dot(a.function, utilities) for a in actions]
+    # when this is over, we have our optimal value_fns, and can get the policy
+    nbh_value_fns = [np.dot(a.function, value_fns) for a in actions]
     for s in xrange(n_states):
-        policy_fun[s] = np.argmax([nbh_u[s] for nbh_u in nbh_utilities])
+        policy_fun[s] = np.argmax([nbh_u[s] for nbh_u in nbh_value_fns])
     policy.function = policy_fun
     return policy
 
