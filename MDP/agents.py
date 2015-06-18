@@ -71,3 +71,16 @@ class ActionFun:
                 return self.function[state]
             else:
                 return self.function(state)
+
+def generate_trajectory(agent, environment, N):
+    """
+    Generate a trace (ndarray) of length N of (s, a) tuples.
+    (a = pi(s)) for an agent with a deterministic policy.
+    """
+    trajectory = np.empty(shape=(N, 2))
+    for n in xrange(N):
+        s = environment.state
+        a, action = agent.select_action(s)
+        environment.evolve(action)
+        trajectory[n, :] = (s, a)
+    return trajectory
