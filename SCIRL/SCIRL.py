@@ -31,7 +31,6 @@ def feature_expectations_heuristic(trajectory, features, gamma, n_actions):
     A = n_actions
     feature_expectations = np.zeros(shape=(A, S, k))
     gamma_powers = [gamma**n for n in xrange(N)]
-    print gamma_powers
     for (i, (s, a)) in enumerate(trajectory):
         feature_expectations[a, s, :] = 0
         for j in xrange(i, N):
@@ -64,8 +63,6 @@ def feature_expectations_exact(mdp, features, gamma):
     feature_expectations = np.zeros(shape=(A, S, k))
     for a in xrange(A):
         feature_expectations[a, :, :] = np.dot((1 + gamma*mdp.actions[a].function*inverse_term), features)
-    print A, S, k
-    print feature_expectations.shape
     return feature_expectations
 
 # ==== linearly parametrised score-function based multi-class classifier === #
@@ -165,10 +162,13 @@ def get_training_data(traj_path, basis_path):
 # === SCIRL === #
 # Putting it together...
 
-def SCIRL(trajectory, basis_functions, n_actions, GAMMA=0.9):
+def SCIRL(trajectory, basis_functions, n_actions, GAMMA=0.9, mdp=None):
     # --- get feature expectations --- #
-    mu = feature_expectations_heuristic(trajectory, basis_functions, 
-                                        GAMMA, n_actions)
+    if mdp is None:
+        mu = feature_expectations_heuristic(trajectory, basis_functions, 
+                                            GAMMA, n_actions)
+    else:
+        mu = feature_expectations_exact(mdp, basis_functions, GAMMA)
     # --- get coefficients (theta) --- #
     clf = clf_large_margin(mu)
     clf.fit(trajectory)
