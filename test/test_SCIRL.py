@@ -14,7 +14,7 @@ mdp_path = './data/test_N100_MDP.npy'
 trajectory, basis_functions = SCIRL.get_training_data(traj_path, basis_path)
 
 # --- run SCIRL --- #
-SCIRL_reward = SCIRL.SCIRL(trajectory, basis_functions)
+SCIRL_reward = SCIRL.SCIRL(trajectory, basis_functions, n_actions=4)
 
 # --- load true MDP --- #
 mdp = np.load(mdp_path).item()
