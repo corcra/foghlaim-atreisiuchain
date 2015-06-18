@@ -20,7 +20,7 @@ import sys
 # In deference to the approach taken in Klein et al. (NIPS 2012) I will use the
 # latter strategy.
 
-def feature_expectations_heuristic(trajectory, features, gamma):
+def feature_expectations_heuristic(trajectory, features, gamma, n_actions):
     """
     Calculate expert feature expectations using the heuristic given by
     equation 5.
@@ -28,7 +28,7 @@ def feature_expectations_heuristic(trajectory, features, gamma):
     N = trajectory.shape[0]
     S = features.shape[0]
     k = features.shape[1]
-    A = max(trajectory[:, 1]) + 1
+    A = n_actions
     feature_expectations = np.zeros(shape=(A, S, k))
     gamma_powers = [gamma**n for n in xrange(N)]
     for (i, (s, a)) in enumerate(trajectory):
@@ -62,8 +62,9 @@ def feature_expectations_exact(mdp, features, gamma):
     inverse_term = np.linalg.inv(1 + gamma*P_expert)
     feature_expectations = np.zeros(shape=(A, S, k))
     for a in xrange(A):
-        print np.dot((1 + gamma*mdp.actions[a].function*inverse_term), features).shape
         feature_expectations[a, :, :] = np.dot((1 + gamma*mdp.actions[a].function*inverse_term), features)
+    print A, S, k
+    print feature_expectations.shape
     return feature_expectations
 
 # ==== linearly parametrised score-function based multi-class classifier === #
@@ -74,7 +75,7 @@ class clf_large_margin(object):
     Multi-class classifier
     """
     def __init__(self, features, parameters=None):
-        self.features = features            # mu (k x |S| x |A|)
+        self.features = features            # mu (|A| x |S| x k)
         self.A = self.features.shape[0]
         self.S = self.features.shape[1]
         self.k = self.features.shape[2]
@@ -89,7 +90,7 @@ class clf_large_margin(object):
         action_indices = data[:, 1]
         state_indices = data[:, 0]
         loss = np.ones(shape=(self.A, N))           # (|A| x N)
-        loss[[range(N), action_indices]] = 0        # zero at true actions
+        loss[[action_indices, range(N)]] = 0        # zero at true actions
         state_features = self.features[:, state_indices, :] # (|A| x N x k)
         if params is None:
             weighted_state_features = np.einsum('k,ijk', 
@@ -100,7 +101,7 @@ class clf_large_margin(object):
                                                 params,
                                                 state_features)     # (|A| x N)
         term1 = np.max(weighted_state_features + loss, axis=0)      # (N)
-        term2 = weighted_state_features[[range(N), action_indices]] # (N)
+        term2 = weighted_state_features[[action_indices, range(N)]] # (N)
         objective = np.mean(term1 - term2) + \
                     0.5*lambd*np.dot(self.params,self.params)       # (1)
         return objective
@@ -122,7 +123,7 @@ class clf_large_margin(object):
             term1 = np.array([state_features[max_action_indices[i], i, :] \
                               for i in xrange(N)])                  # (N x k)
                                                             # NOTE TRANSPOSED
-            term2 = np.array([state_features[:, i, action_indices[i]] \
+            term2 = np.array([state_features[action_indices[i], i, :] \
                               for i in xrange(N)])                  # (N x k)
             diff_term = np.mean(term1 - term2, axis=0)      # (k)
             subgradient = diff_term + lambd*self.params
@@ -163,9 +164,10 @@ def get_training_data(traj_path, basis_path):
 # === SCIRL === #
 # Putting it together...
 
-def SCIRL(trajectory, basis_functions, GAMMA=0.9):
+def SCIRL(trajectory, basis_functions, n_actions, GAMMA=0.9):
     # --- get feature expectations --- #
-    mu = feature_expectations_heuristic(trajectory, basis_functions, GAMMA)
+    mu = feature_expectations_heuristic(trajectory, basis_functions, 
+                                        GAMMA, n_actions)
     # --- get coefficients (theta) --- #
     clf = clf_large_margin(mu)
     clf.fit(trajectory)
