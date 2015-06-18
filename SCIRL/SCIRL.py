@@ -31,8 +31,9 @@ def feature_expectations_heuristic(trajectory, features, gamma, n_actions):
     A = n_actions
     feature_expectations = np.zeros(shape=(A, S, k))
     gamma_powers = [gamma**n for n in xrange(N)]
+    print gamma_powers
     for (i, (s, a)) in enumerate(trajectory):
-        feature_expectations[:, s, a] = 0
+        feature_expectations[a, s, :] = 0
         for j in xrange(i, N):
             feature_expectations[a, s, :] += gamma_powers[j-i]*features[trajectory[j, 0], :]
         for aa in xrange(A):
