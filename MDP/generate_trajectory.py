@@ -39,6 +39,6 @@ agent = Agent(actions, optimal_policy)
 trajectory = generate_trajectory(agent, environment, N)
 
 # --- save --- #
-fname = './test/test_N'+str(N)
+fname = '../test/test_N'+str(N)
 np.save(fname+'_MDP', mdp)
 np.save(fname+'_traj', trajectory)

@@ -56,7 +56,7 @@ class MDP:
         self.actions = actions          # ActionFun
         self.rewards = rewards          # vector length n_states
         self.discount = discount        # float
-        self.policy = None      # PolicyFun
+        self.policy = None              # PolicyFun
                                         # for now, this is deterministic
     def solve(self, rewards=None, eps=0.01, method='value_iteration'):
         """
