@@ -5,7 +5,7 @@ from SCIRL.SCIRL import clf_large_margin
 import numpy as np
 
 # -- make features -- #
-A = 3
+A = 7
 S = 10
 k = 7
 # not very reasonable
@@ -13,9 +13,8 @@ features = np.random.normal(size=(A, S, k))         # |A| x |S| x k (duh)
 
 # -- define clf -- #
 clf = clf_large_margin(features)
-
 # -- make data -- #
-N = 100000
+N = 1000
 states = np.random.randint(low=0, high=S, size=N)
 # fake some 'true' parameters
 true_params = np.random.normal(size=k)
@@ -27,10 +26,13 @@ labels = np.argmax(scores, axis=0)
 data = np.vstack((states, labels)).transpose()
 
 # -- fit ! -- #
+initial_objective = clf.objective(data)
 clf.fit(data)
 
 # --- compare true params --- #
-print 'True objective:', clf.objective(data, lambd=0.5, params=true_params)
-print 'Fitted objective:', clf.objective(data, lambd=0.5)
-print 'True parameters:', true_params
-print 'Fitted parameters:', clf.params
+print '\t\t\t\ttrue objective: %.3f' % clf.objective(data, lambd=0.5, params=true_params)
+print 'initial objective: %.3f' % initial_objective, '===> fitted objective: %.3f' % clf.objective(data, lambd=0.5)
+print '\nParameters:'
+print 'True\tFitted'
+for i in xrange(k):
+    print '%+.3f' % true_params[i],'\t%+.3f' % clf.params[i]
