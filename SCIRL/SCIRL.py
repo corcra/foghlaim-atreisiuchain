@@ -93,14 +93,14 @@ class clf_large_margin(object):
         loss = np.ones(shape=(self.A, N))           # (|A| x N)
         loss[[action_indices, range(N)]] = 0        # zero at true actions
         state_features = self.features[:, state_indices, :] # (|A| x N x k)
-        weighted_state_features = np.dot(state_features, params) # (|A| x N)
+        weighted_state_features = np.dot(state_features, self.params) # (|A| x N)
         term1 = np.max(weighted_state_features + loss, axis=0)      # (N)
         term2 = weighted_state_features[[action_indices, range(N)]] # (N)
         objective = np.mean(term1 - term2) + \
                     0.5*lambd*np.dot(self.params,self.params)       # (1)
         return objective
     def fit(self, data, alpha=0.1, lambd=0.5, threshold=1e-6, max_iter=10000, 
-            verbose=True):
+            verbose=2):
         """ Subgradient descent on the objective function """
         N = data.shape[0]
         delta_objective = -1
@@ -110,7 +110,7 @@ class clf_large_margin(object):
         current_objective = self.objective(data)
         iteration = 0
         while abs(delta_objective) > threshold and delta_objective < 0:
-            if verbose: print iteration, current_objective, delta_objective
+            if verbose > 1: print iteration, current_objective, delta_objective
             weighted_state_features = np.dot(state_features, self.params) # (|A| x N)
             max_action_indices = np.argmax(weighted_state_features, axis=0)
             term1 = np.array([state_features[max_action_indices[i], i, :] \
@@ -128,8 +128,8 @@ class clf_large_margin(object):
             if iteration > max_iter:
                 print 'WARNING: Hit max iterations before convergence.'
                 break
-            _ = self.predict(data)
-        if not iteration > max_iter and verbose:
+            if verbose > 1: print self.accuracy(data)
+        if not iteration > max_iter and verbose > 0:
             print 'Converged after', iteration, 'iterations.'
         print ''
         return True
@@ -139,11 +139,11 @@ class clf_large_margin(object):
         state_features = self.features[:, data[:, 0], :]        # (|A| x N x k)
         scores = np.dot(state_features, self.params)            # (|A| x N)
         labels = np.argmax(scores, axis=0)
-        if len(data.shape) > 1:
-            # assume labels were also provided
-            accuracy = np.mean(labels == data[:, 1])
-            print 'Accuracy is', accuracy
         return labels
+    def accuracy(self, data):
+        labels = self.predict(data)
+        accuracy = np.mean(labels == data[:, 1])
+        return accuracy
 
 # === loading/saving data === #
 
