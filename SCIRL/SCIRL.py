@@ -81,6 +81,7 @@ class clf_large_margin(object):
         self.k = self.features.shape[2]
         if parameters is None:
             parameters = np.random.normal(size=self.k)
+            #parameters = np.zeros(shape=self.k)
         else:
             assert parameters.shape[0] == self.k
         self.params = parameters            # theta (k)
@@ -107,7 +108,8 @@ class clf_large_margin(object):
         objective = np.mean(term1 - term2) + \
                     0.5*lambd*np.dot(self.params,self.params)       # (1)
         return objective
-    def fit(self, data, alpha=0.1, lambd=0.5, threshold=1e-6, max_iter=10000):
+    def fit(self, data, alpha=0.1, lambd=0.5, threshold=1e-6, max_iter=10000, 
+            verbose=True):
         """ Subgradient descent on the objective function """
         N = data.shape[0]
         delta_objective = -1
@@ -116,9 +118,8 @@ class clf_large_margin(object):
         state_features= self.features[:, state_indices, :]  # (|A| x N x k)
         current_objective = self.objective(data)
         iteration = 0
-        while abs(delta_objective) > threshold:
-            #and delta_objective < 0:
-            print iteration, current_objective, delta_objective
+        while abs(delta_objective) > threshold and delta_objective < 0:
+            if verbose: print iteration, current_objective, delta_objective
             weighted_state_features = np.dot(state_features, self.params) # (|A| x N)
 #            weighted_state_features = np.einsum('k,ijk',
 #                                                self.params,
@@ -140,6 +141,9 @@ class clf_large_margin(object):
                 print 'WARNING: Hit max iterations before convergence.'
                 break
             _ = self.predict(data)
+        if not iteration > max_iter and verbose:
+            print 'Converged after', iteration, 'iterations.'
+        print ''
         return True
     def predict(self, data):
         """ Predict the labels associated with a list of states. """
