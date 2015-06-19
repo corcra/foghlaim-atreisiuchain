@@ -24,6 +24,8 @@ def feature_expectations_heuristic(trajectory, features, gamma, n_actions):
     """
     Calculate expert feature expectations using the heuristic given by
     equation 5.
+    This is mad slow and doesn't seem to correspond to results from the 'exact'
+    method.
     """
     N = trajectory.shape[0]
     S = features.shape[0]
@@ -78,7 +80,7 @@ class clf_large_margin(object):
         self.S = self.features.shape[1]
         self.k = self.features.shape[2]
         if parameters is None:
-            parameters = np.zeros(self.k)
+            parameters = np.random.normal(size=self.k)
         else:
             assert parameters.shape[0] == self.k
         self.params = parameters            # theta (k)
@@ -91,13 +93,15 @@ class clf_large_margin(object):
         loss[[action_indices, range(N)]] = 0        # zero at true actions
         state_features = self.features[:, state_indices, :] # (|A| x N x k)
         if params is None:
-            weighted_state_features = np.einsum('k,ijk', 
-                                                self.params,
-                                                state_features)     # (|A| x N)
+            weighted_state_features = np.dot(state_features, self.params) # (|A| x N)
+#            weighted_state_features = np.einsum('ijk,k', 
+#                                                state_features,     # (|A| x N)
+#                                                self.params)
         else:
-            weighted_state_features = np.einsum('k,ijk',
-                                                params,
-                                                state_features)     # (|A| x N)
+            weighted_state_features = np.dot(state_features, params) # (|A| x N)
+#            weighted_state_features = np.einsum('ijk,k',
+#                                                state_features,     # (|A| x N)
+#                                                params)
         term1 = np.max(weighted_state_features + loss, axis=0)      # (N)
         term2 = weighted_state_features[[action_indices, range(N)]] # (N)
         objective = np.mean(term1 - term2) + \
@@ -107,16 +111,18 @@ class clf_large_margin(object):
         """ Subgradient descent on the objective function """
         N = data.shape[0]
         delta_objective = -1
-        objective = self.objective(data)
         state_indices = data[:, 0]
         action_indices = data[:, 1]
         state_features= self.features[:, state_indices, :]  # (|A| x N x k)
         current_objective = self.objective(data)
         iteration = 0
-        while abs(delta_objective) > threshold and delta_objective < 0:
-            weighted_state_features = np.einsum('k,ijk',
-                                                self.params,
-                                                state_features)     # (|A| x N)
+        while abs(delta_objective) > threshold:
+            #and delta_objective < 0:
+            print iteration, current_objective, delta_objective
+            weighted_state_features = np.dot(state_features, self.params) # (|A| x N)
+#            weighted_state_features = np.einsum('k,ijk',
+#                                                self.params,
+#                                                state_features)     # (|A| x N)
             max_action_indices = np.argmax(weighted_state_features, axis=0)
             term1 = np.array([state_features[max_action_indices[i], i, :] \
                               for i in xrange(N)])                  # (N x k)
@@ -133,9 +139,19 @@ class clf_large_margin(object):
             if iteration > max_iter:
                 print 'WARNING: Hit max iterations before convergence.'
                 break
-            #print iteration, current_objective, delta_objective
+            _ = self.predict(data)
         return True
-
+    def predict(self, data):
+        """ Predict the labels associated with a list of states. """
+        N = data.shape[0]
+        state_features = self.features[:, data[:, 0], :]        # (|A| x N x k)
+        scores = np.dot(state_features, self.params)            # (|A| x N)
+        labels = np.argmax(scores, axis=0)
+        if len(data.shape) > 1:
+            # assume labels were also provided
+            accuracy = np.mean(labels == data[:, 1])
+            print 'Accuracy is', accuracy
+        return labels
 
 # === loading/saving data === #
 
