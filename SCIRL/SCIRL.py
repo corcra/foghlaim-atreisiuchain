@@ -85,7 +85,7 @@ class clf_large_margin(object):
         else:
             assert parameters.shape[0] == self.k
         self.params = parameters            # theta (k)
-    def objective(self, data, lambd=0.5, params=None):
+    def objective(self, data, lambd=0.5):
         """ See section 4.2 """
         N = data.shape[0]
         action_indices = data[:, 1]
@@ -93,16 +93,7 @@ class clf_large_margin(object):
         loss = np.ones(shape=(self.A, N))           # (|A| x N)
         loss[[action_indices, range(N)]] = 0        # zero at true actions
         state_features = self.features[:, state_indices, :] # (|A| x N x k)
-        if params is None:
-            weighted_state_features = np.dot(state_features, self.params) # (|A| x N)
-#            weighted_state_features = np.einsum('ijk,k', 
-#                                                state_features,     # (|A| x N)
-#                                                self.params)
-        else:
-            weighted_state_features = np.dot(state_features, params) # (|A| x N)
-#            weighted_state_features = np.einsum('ijk,k',
-#                                                state_features,     # (|A| x N)
-#                                                params)
+        weighted_state_features = np.dot(state_features, params) # (|A| x N)
         term1 = np.max(weighted_state_features + loss, axis=0)      # (N)
         term2 = weighted_state_features[[action_indices, range(N)]] # (N)
         objective = np.mean(term1 - term2) + \
@@ -121,9 +112,6 @@ class clf_large_margin(object):
         while abs(delta_objective) > threshold and delta_objective < 0:
             if verbose: print iteration, current_objective, delta_objective
             weighted_state_features = np.dot(state_features, self.params) # (|A| x N)
-#            weighted_state_features = np.einsum('k,ijk',
-#                                                self.params,
-#                                                state_features)     # (|A| x N)
             max_action_indices = np.argmax(weighted_state_features, axis=0)
             term1 = np.array([state_features[max_action_indices[i], i, :] \
                               for i in xrange(N)])                  # (N x k)
