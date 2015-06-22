@@ -5,9 +5,11 @@
 from SCIRL import SCIRL
 from MDP import mdp
 import numpy as np
+from copy import deepcopy
 
 traj_path = './data/test_N100_traj.npy'
-basis_path = './data/test_basis_S4k3.npy'
+# using trivial basis functions (identity)
+basis_path = './data/test_N100_basis_S4k1.npy'
 mdp_path = './data/test_N100_MDP.npy'
 
 # --- get data --- #
@@ -21,7 +23,21 @@ MDP_reward = mdp.rewards
 SCIRL_reward_modelfree = SCIRL.SCIRL(trajectory, basis_functions, n_actions=4)
 SCIRL_reward_model = SCIRL.SCIRL(trajectory, basis_functions, n_actions=4,mdp=mdp)
 
-# --- compare --- #
+# --- compare rewards --- #
 print 'SCIRL rewards: (no model)', SCIRL_reward_modelfree
 print 'SCIRL rewards: (model)', SCIRL_reward_model
 print 'MDP rewards:', MDP_reward
+
+# --- compare optimal poicies according to these rewards --- #
+print ''
+mdp_SCIRL_modelfree = deepcopy(mdp)
+mdp_SCIRL_modelfree.policy.function = SCIRL_reward_modelfree
+mdp_SCIRL_modelfree.solve()
+mdp_SCIRL_model = deepcopy(mdp)
+mdp_SCIRL_model.policy.function = SCIRL_reward_model
+mdp_SCIRL_model.solve()
+print ''
+
+print 'SCIRL policy: (no model)', mdp_SCIRL_modelfree.policy.function
+print 'SCIRL policy: (model)', mdp_SCIRL_model.policy.function
+print 'ground truth policy:', mdp.policy.function
