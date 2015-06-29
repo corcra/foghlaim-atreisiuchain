@@ -1,2 +1,2 @@
-# foghlaim-atreisiúcháin
-Reinforcement learning algorithms in python
+# pRLy
+Reinforcement learning (RL) algorithms in Python... get it?
